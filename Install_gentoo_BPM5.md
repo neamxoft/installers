@@ -1,6 +1,6 @@
 # ============================================================
 
-# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.4**
+# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.5**
 
 ## **(SDR + IC-705 + FreeDV RADE + Backend REST Edition)**
 
@@ -10,20 +10,21 @@
 
 # ============================================================
 
-Sistema optimizado para:
+Optimizada para:
 
 * RTL-SDR (rtl_tcp)
 * Airspy HF+ Discovery
-* IC-705: CAT + USB Audio
-* FreeDV (incluye **RADE**)
+* IC-705: CAT + Audio USB
+* FreeDV (incluye modo **RADE**)
 * Backend REST FastAPI
-* Funcionamiento **headless**
-* Neovim (*vi como wrapper*)
+* Uso **headless**
+* Neovim (accedido como `vi`)
 * ZRAM + CPU governor performance
-* Conexión Android USB-C ↔ RJ45
 * Kernel minimalista 6.12
+* Conexión USB-C ↔ RJ45 Android Samsung
+* Bajo uso de eMMC (compilación en /var)
 
-Incluye tu archivo personalizado:
+Incluye tu archivo:
 👉 **`linux-bpi-m5-6.12-minimal.config`**
 
 ---
@@ -32,10 +33,10 @@ Incluye tu archivo personalizado:
 **1. 📦 Requisitos Previos**
 ╚════════════════════════════════════════╝
 
-* Banana Pi M5 (Amlogic S905X3 + eMMC 16GB)
-* microSD 16GB+ con Armbian CLI
-* PC/macOS
-* Ethernet o USB-C ↔ RJ45
+* Banana Pi M5 (S905X3 + 4GB RAM)
+* microSD 16GB+ con Armbian
+* macOS / Linux para generar SD
+* Conexión Ethernet o USB-C tethering
 * SSH opcional
 
 ---
@@ -64,7 +65,7 @@ lsblk
 ---
 
 ╔════════════════════════════════════════╗
-**4. ⚙️ Particionar el eMMC (Esquema ideal v2.2)**
+**4. ⚙️ Particionar eMMC (Esquema ideal v2.2)**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -98,7 +99,7 @@ mkfs.ext4 /dev/mmcblk1p3
 ╚════════════════════════════════════════╝
 
 ```bash
-mkdir -p /mnt/gentoo
+mkdir /mnt/gentoo
 mount /dev/mmcblk1p2 /mnt/gentoo
 
 mkdir /mnt/gentoo/boot
@@ -111,7 +112,7 @@ mount /dev/mmcblk1p3 /mnt/gentoo/var
 ---
 
 ╔════════════════════════════════════════╗
-**7. 📥 Descargar Stage3 ARM64**
+**7. 📥 Descargar Stage3 ARM64 (OpenRC)**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -159,10 +160,10 @@ export PS1="(chroot) $PS1"
 ---
 
 ╔════════════════════════════════════════╗
-**11. 🌍 Configurar Locales (ANTES DE SYNC)**
+**11. 🌍 Configurar Locales (ANTES DEL SYNC)**
 ╚════════════════════════════════════════╝
 
-> Aún no hay Neovim → usar **nano**.
+> Usamos **nano** porque Neovim aún no está instalado.
 
 ```bash
 nano /etc/locale.gen
@@ -189,10 +190,8 @@ unset LC_ALL LANGUAGE LC_MESSAGES
 ---
 
 ╔════════════════════════════════════════╗
-**12. ⚙️ Configurar make.conf optimizado ARM64**
+**12. ⚙️ Configurar make.conf (antes del sync)**
 ╚════════════════════════════════════════╝
-
-> También con **nano**, porque aún no instalamos editor.
 
 ```bash
 nano /etc/portage/make.conf
@@ -227,7 +226,7 @@ PKGDIR="/var/cache/binpkgs"
 ╚════════════════════════════════════════╝
 
 ```bash
-emerge --sync
+emerge --ask --sync
 ```
 
 ---
@@ -238,21 +237,14 @@ emerge --sync
 
 ```bash
 emerge --ask app-editors/neovim
-```
-
-Asignar:
-
-```bash
 ln -sf /usr/bin/nvim /usr/bin/vi
 ln -sf /usr/bin/nvim /usr/bin/vim
 eselect editor set /usr/bin/nvim
 ```
 
-A partir de ahora usarás **solo:**
-
-```bash
-vi /ruta/archivo
-```
+Desde ahora:
+📌 **Siempre usar `vi archivo`**
+(es Neovim)
 
 ---
 
@@ -261,17 +253,17 @@ vi /ruta/archivo
 ╚════════════════════════════════════════╝
 
 ```bash
-emerge -avuDU --with-bdeps=y @world
+emerge --ask -avuDU --with-bdeps=y @world
 ```
 
 ---
 
 ╔════════════════════════════════════════╗
-**16. 🐚 Instalar y configurar fish**
+**16. 🐚 Instalar fish**
 ╚════════════════════════════════════════╝
 
 ```bash
-emerge app-shells/fish
+emerge --ask app-shells/fish
 mkdir -p ~/.config/fish
 vi ~/.config/fish/config.fish
 ```
@@ -295,13 +287,14 @@ end
 ZRAM:
 
 ```bash
-emerge sys-block/zram-init
+emerge --ask sys-block/zram-init
 rc-update add zram-init default
 ```
 
-Governor:
+CPU *performance*:
 
 ```bash
+emerge --ask sys-power/cpupower
 echo 'GOVERNOR="performance"' > /etc/conf.d/cpupower
 rc-update add cpupower default
 ```
@@ -313,7 +306,7 @@ rc-update add cpupower default
 ╚════════════════════════════════════════╝
 
 ```bash
-emerge sys-kernel/gentoo-sources
+emerge --ask sys-kernel/gentoo-sources
 cd /usr/src/linux
 cp /mnt/data/linux-bpi-m5-6.12-minimal.config .config
 make olddefconfig
@@ -336,7 +329,7 @@ sync
 ╚════════════════════════════════════════╝
 
 ```bash
-emerge sys-boot/u-boot-bananapi-m5
+emerge --ask sys-boot/u-boot-bananapi-m5
 dd if=/usr/lib/u-boot/bananapi_m5/u-boot.bin of=/dev/mmcblk1 bs=512 seek=1 conv=fsync
 sync
 ```
@@ -361,7 +354,7 @@ booti ${kernel_addr} - ${fdt_addr}
 ---
 
 ╔════════════════════════════════════════╗
-**21. 🌐 Red y SSH**
+**21. 🌐 Red + SSH**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -387,23 +380,12 @@ sync
 poweroff
 ```
 
-Retirar microSD → boot desde eMMC.
-
 ---
 
-# 🔥 SECCIONES SDR / IC-705 / FreeDV / Backend / rclone
+# SECCIONES SDR — IC-705 — FreeDV — Backend — Tethering — rclone
 
-*(idénticas a la v2.3, actualizadas solo para usar `vi` en todo)*
+*(sin cambios excepto el uso de `vi` en todo)*
 
-Si quieres, puedo hacer:
+Si quieres que las convierta al mismo estilo ASCII (opcional), puedo hacerlo para la **v2.6**.
 
-### ✔ v2.5 con tema “oscuro”
-
-### ✔ v2.5 en formato **PDF listo**
-
-### ✔ v2.5 en HTML con TOC
-
-### ✔ o una versión **PRO** tipo libro/documentación
-
-Solo dime:
-👉 **“Haz la v2.5 en…”**
+---
