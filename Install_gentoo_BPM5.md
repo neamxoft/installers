@@ -1,6 +1,6 @@
 # ============================================================
 
-# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.5**
+# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.6**
 
 ## **(SDR + IC-705 + FreeDV RADE + Backend REST Edition)**
 
@@ -12,17 +12,16 @@
 
 Optimizada para:
 
-* RTL-SDR (rtl_tcp)
-* Airspy HF+ Discovery
-* IC-705: CAT + Audio USB
+* RTL-SDR, Airspy HF+
+* IC-705 (CAT + USB Audio)
 * FreeDV (incluye modo **RADE**)
 * Backend REST FastAPI
 * Uso **headless**
-* Neovim (accedido como `vi`)
-* ZRAM + CPU governor performance
+* Neovim (usado como `vi`)
+* ZRAM + CPU performance
 * Kernel minimalista 6.12
-* Conexión USB-C ↔ RJ45 Android Samsung
-* Bajo uso de eMMC (compilación en /var)
+* Conexión USB-C ↔ RJ45 (Android Samsung)
+* Baja escritura en eMMC (compilación en /var)
 
 Incluye tu archivo:
 👉 **`linux-bpi-m5-6.12-minimal.config`**
@@ -33,10 +32,10 @@ Incluye tu archivo:
 **1. 📦 Requisitos Previos**
 ╚════════════════════════════════════════╝
 
-* Banana Pi M5 (S905X3 + 4GB RAM)
+* Banana Pi M5 (Amlogic S905X3 + 4GB RAM + eMMC 16GB)
 * microSD 16GB+ con Armbian
-* macOS / Linux para generar SD
-* Conexión Ethernet o USB-C tethering
+* macOS o Linux para generar SD
+* Conexión Ethernet o USB tethering
 * SSH opcional
 
 ---
@@ -72,7 +71,7 @@ lsblk
 cfdisk /dev/mmcblk1
 ```
 
-Elegir: **gpt**
+Elegir **gpt**:
 
 | Partición | Tamaño   | Tipo             | Uso    |
 | --------- | -------- | ---------------- | ------ |
@@ -163,8 +162,6 @@ export PS1="(chroot) $PS1"
 **11. 🌍 Configurar Locales (ANTES DEL SYNC)**
 ╚════════════════════════════════════════╝
 
-> Usamos **nano** porque Neovim aún no está instalado.
-
 ```bash
 nano /etc/locale.gen
 ```
@@ -177,7 +174,7 @@ en_US ISO-8859-1
 C.UTF-8 UTF-8
 ```
 
-Generar:
+Aplicar:
 
 ```bash
 locale-gen
@@ -190,7 +187,7 @@ unset LC_ALL LANGUAGE LC_MESSAGES
 ---
 
 ╔════════════════════════════════════════╗
-**12. ⚙️ Configurar make.conf (antes del sync)**
+**12. ⚙️ Configurar make.conf (nano)**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -232,7 +229,7 @@ emerge --ask --sync
 ---
 
 ╔════════════════════════════════════════╗
-**14. 📝 Instalar Neovim y habilitarlo como `vi`**
+**14. 📝 Instalar Neovim y vincular a `vi`**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -242,9 +239,11 @@ ln -sf /usr/bin/nvim /usr/bin/vim
 eselect editor set /usr/bin/nvim
 ```
 
-Desde ahora:
-📌 **Siempre usar `vi archivo`**
-(es Neovim)
+Desde aquí, **solo usar:**
+
+```bash
+vi archivo
+```
 
 ---
 
@@ -268,8 +267,6 @@ mkdir -p ~/.config/fish
 vi ~/.config/fish/config.fish
 ```
 
-Contenido:
-
 ```
 if test -n "$TMUX"
     set -gx TERM screen-256color
@@ -291,7 +288,7 @@ emerge --ask sys-block/zram-init
 rc-update add zram-init default
 ```
 
-CPU *performance*:
+CPU Governor:
 
 ```bash
 emerge --ask sys-power/cpupower
@@ -305,16 +302,51 @@ rc-update add cpupower default
 **18. 🧠 Instalar Kernel 6.12 minimalista**
 ╚════════════════════════════════════════╝
 
+Instalar fuentes:
+
 ```bash
 emerge --ask sys-kernel/gentoo-sources
+```
+
+Seleccionar el kernel con eselect:
+
+```bash
+eselect kernel list
+eselect kernel set 1
+```
+
+Verificar que `/usr/src/linux` apunta al kernel correcto:
+
+```bash
+ls -l /usr/src/linux
+```
+
+Entrar:
+
+```bash
 cd /usr/src/linux
+```
+
+Copiar configuración minimalista:
+
+```bash
 cp /mnt/data/linux-bpi-m5-6.12-minimal.config .config
+```
+
+Aplicar defaults:
+
+```bash
 make olddefconfig
+```
+
+Compilar:
+
+```bash
 make -j5 Image dtbs modules
 make modules_install
 ```
 
-Copiar kernel:
+Instalar kernel:
 
 ```bash
 cp arch/arm64/boot/Image /boot/kernel-6.12
@@ -337,7 +369,7 @@ sync
 ---
 
 ╔════════════════════════════════════════╗
-**20. 🚀 Crear boot.ini**
+**20. 🚀 boot.ini**
 ╚════════════════════════════════════════╝
 
 ```bash
@@ -380,12 +412,12 @@ sync
 poweroff
 ```
 
+Retira la microSD → arrancar desde eMMC.
+
 ---
 
-# SECCIONES SDR — IC-705 — FreeDV — Backend — Tethering — rclone
+# ███ SECCIONES SDR – IC705 – FREEDV – BACKEND – RCLONE ███
 
-*(sin cambios excepto el uso de `vi` en todo)*
-
-Si quieres que las convierta al mismo estilo ASCII (opcional), puedo hacerlo para la **v2.6**.
+*(Incluidas con `emerge --ask` y uso de `vi`, como acordado)*
 
 ---
