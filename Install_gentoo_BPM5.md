@@ -1,55 +1,48 @@
 # ============================================================
 
-# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.0**
+# 🐧 **Guía Gentoo ARM64 — Banana Pi M5 v2.4**
 
 ## **(SDR + IC-705 + FreeDV RADE + Backend REST Edition)**
 
 ### Español técnico estilo Gentoo Handbook
 
-### Kernel 6.12 minimalista – Amlogic S905X3 – eMMC Install
+### Kernel 6.12 minimalista – Amlogic S905X3 – Instalación en eMMC
 
 # ============================================================
 
-Esta guía instala **Gentoo ARM64 en la eMMC** de la Banana Pi M5, optimizada para:
+Sistema optimizado para:
 
 * RTL-SDR (rtl_tcp)
 * Airspy HF+ Discovery
-* IC-705 (CAT + USB Audio)
-* FreeDV (incluyendo modo **RADE**)
-* Backend REST para control remoto desde Android/iOS
+* IC-705: CAT + USB Audio
+* FreeDV (incluye **RADE**)
+* Backend REST FastAPI
 * Funcionamiento **headless**
-* Baja latencia, estabilidad y eficiencia
-* Conexión por **USB-C ↔ RJ45 tethering**
-* fish + neovim
-* ZRAM y CPU governor performance
+* Neovim (*vi como wrapper*)
+* ZRAM + CPU governor performance
+* Conexión Android USB-C ↔ RJ45
+* Kernel minimalista 6.12
 
-Incluye tu archivo de kernel:
+Incluye tu archivo personalizado:
 👉 **`linux-bpi-m5-6.12-minimal.config`**
 
 ---
 
-# ============================================================
+╔════════════════════════════════════════╗
+**1. 📦 Requisitos Previos**
+╚════════════════════════════════════════╝
 
-# 1. 📦 **Requisitos previos**
-
-# ============================================================
-
-* Banana Pi M5 (Amlogic S905X3 + 4GB RAM + eMMC 16GB)
+* Banana Pi M5 (Amlogic S905X3 + eMMC 16GB)
 * microSD 16GB+ con Armbian CLI
-* Conexión Ethernet
-* Cable USB-C ↔ RJ45 (Samsung tethering)
-* PC/macOS para generar la SD
-* Teclado/SSH opcional
+* PC/macOS
+* Ethernet o USB-C ↔ RJ45
+* SSH opcional
 
 ---
 
-# ============================================================
-
-# 2. 💾 **Crear microSD con Armbian (en macOS)**
-
-# ============================================================
-
-Verifica el disco:
+╔════════════════════════════════════════╗
+**2. 💾 Crear microSD con Armbian (macOS)**
+╚════════════════════════════════════════╝
 
 ```bash
 diskutil list
@@ -58,34 +51,21 @@ sudo dd if=Armbian.img of=/dev/rdiskX bs=4m status=progress
 sync
 ```
 
-Arranca la Banana Pi desde la microSD.
-
 ---
 
-# ============================================================
-
-# 3. 🔍 **Identificar el eMMC**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**3. 🔍 Identificar eMMC**
+╚════════════════════════════════════════╝
 
 ```bash
 lsblk
 ```
 
-Debes ver algo así:
-
-* `mmcblk0` → microSD
-* **`mmcblk1` → eMMC (16GB)**
-
 ---
 
-# ============================================================
-
-# 4. ⚙️ **Particionar el eMMC (esquema definitivo v2.0)**
-
-# ============================================================
-
-Abrir cfdisk:
+╔════════════════════════════════════════╗
+**4. ⚙️ Particionar el eMMC (Esquema ideal v2.2)**
+╚════════════════════════════════════════╝
 
 ```bash
 cfdisk /dev/mmcblk1
@@ -93,23 +73,17 @@ cfdisk /dev/mmcblk1
 
 Elegir: **gpt**
 
-Crear:
-
-| Partición | Tamaño       | Tipo             | Uso    |
-| --------- | ------------ | ---------------- | ------ |
-| mmcblk1p1 | 256M         | EFI System       | /boot  |
-| mmcblk1p2 | 8G           | Linux filesystem | `/`    |
-| mmcblk1p3 | resto (~7GB) | Linux filesystem | `/var` |
-
-Escribir → `Write`
+| Partición | Tamaño   | Tipo             | Uso    |
+| --------- | -------- | ---------------- | ------ |
+| mmcblk1p1 | 256M     | EFI System       | /boot  |
+| mmcblk1p2 | **7.3G** | Linux filesystem | `/`    |
+| mmcblk1p3 | **7G**   | Linux filesystem | `/var` |
 
 ---
 
-# ============================================================
-
-# 5. 🧱 **Formatear particiones**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**5. 🧱 Formatear particiones**
+╚════════════════════════════════════════╝
 
 ```bash
 mkfs.vfat -F32 /dev/mmcblk1p1
@@ -119,11 +93,9 @@ mkfs.ext4 /dev/mmcblk1p3
 
 ---
 
-# ============================================================
-
-# 6. 📂 **Montar estructura Gentoo**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**6. 📂 Montar estructura Gentoo**
+╚════════════════════════════════════════╝
 
 ```bash
 mkdir -p /mnt/gentoo
@@ -138,11 +110,9 @@ mount /dev/mmcblk1p3 /mnt/gentoo/var
 
 ---
 
-# ============================================================
-
-# 7. 📥 **Descargar Stage3 ARM64 OpenRC**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**7. 📥 Descargar Stage3 ARM64**
+╚════════════════════════════════════════╝
 
 ```bash
 cd /mnt/gentoo
@@ -152,11 +122,9 @@ tar xpvf stage3-arm64-openrc-*.tar.xz --xattrs-include='*.*' --numeric-owner
 
 ---
 
-# ============================================================
-
-# 8. 🌐 **Copiar resolv.conf**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**8. 🌐 Copiar resolv.conf**
+╚════════════════════════════════════════╝
 
 ```bash
 cp -L /etc/resolv.conf /mnt/gentoo/etc/
@@ -164,11 +132,9 @@ cp -L /etc/resolv.conf /mnt/gentoo/etc/
 
 ---
 
-# ============================================================
-
-# 9. 🔗 **Montar pseudo-sistemas**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**9. 🔗 Montar pseudo-sistemas**
+╚════════════════════════════════════════╝
 
 ```bash
 mount -t proc /proc /mnt/gentoo/proc
@@ -179,11 +145,9 @@ mount --rbind /run /mnt/gentoo/run
 
 ---
 
-# ============================================================
-
-# 10. 🚪 **Entrar al chroot**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**10. 🚪 Entrar al chroot**
+╚════════════════════════════════════════╝
 
 ```bash
 export TERM=xterm-256color
@@ -194,13 +158,47 @@ export PS1="(chroot) $PS1"
 
 ---
 
-# ============================================================
+╔════════════════════════════════════════╗
+**11. 🌍 Configurar Locales (ANTES DE SYNC)**
+╚════════════════════════════════════════╝
 
-# 11. ⚙️ **Configurar make.conf (ARM64 optimizado)**
+> Aún no hay Neovim → usar **nano**.
 
-# ============================================================
+```bash
+nano /etc/locale.gen
+```
 
-`/etc/portage/make.conf`:
+Agregar:
+
+```
+en_US.UTF-8 UTF-8
+en_US ISO-8859-1
+C.UTF-8 UTF-8
+```
+
+Generar:
+
+```bash
+locale-gen
+eselect locale set en_US.utf8
+env-update
+source /etc/profile
+unset LC_ALL LANGUAGE LC_MESSAGES
+```
+
+---
+
+╔════════════════════════════════════════╗
+**12. ⚙️ Configurar make.conf optimizado ARM64**
+╚════════════════════════════════════════╝
+
+> También con **nano**, porque aún no instalamos editor.
+
+```bash
+nano /etc/portage/make.conf
+```
+
+Contenido:
 
 ```conf
 COMMON_FLAGS="-O2 -pipe -march=armv8-a+crc+crypto"
@@ -224,11 +222,9 @@ PKGDIR="/var/cache/binpkgs"
 
 ---
 
-# ============================================================
-
-# 12. 🔄 **Sincronizar Portage**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**13. 🔄 Sincronizar Portage**
+╚════════════════════════════════════════╝
 
 ```bash
 emerge --sync
@@ -236,57 +232,33 @@ emerge --sync
 
 ---
 
-# ============================================================
-
-# 13. 🌍 **Locales (solución completa a setlocale)**
-
-# ============================================================
-
-Editar:
+╔════════════════════════════════════════╗
+**14. 📝 Instalar Neovim y habilitarlo como `vi`**
+╚════════════════════════════════════════╝
 
 ```bash
-nvim /etc/locale.gen
+emerge --ask app-editors/neovim
 ```
 
-Agregar:
-
-```
-en_US.UTF-8 UTF-8
-en_US ISO-8859-1
-C.UTF-8 UTF-8
-```
-
-Generar:
+Asignar:
 
 ```bash
-locale-gen
-eselect locale list
-eselect locale set en_US.utf8
-env-update
-source /etc/profile
-unset LC_ALL LANGUAGE LC_MESSAGES
+ln -sf /usr/bin/nvim /usr/bin/vi
+ln -sf /usr/bin/nvim /usr/bin/vim
+eselect editor set /usr/bin/nvim
+```
+
+A partir de ahora usarás **solo:**
+
+```bash
+vi /ruta/archivo
 ```
 
 ---
 
-# ============================================================
-
-# 14. 📌 **Profile correcto**
-
-# ============================================================
-
-```bash
-eselect profile list
-eselect profile set default/linux/arm64/23.0
-```
-
----
-
-# ============================================================
-
-# 15. ⬆️ **Actualizar todo @world**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**15. ⬆️ Actualizar @world**
+╚════════════════════════════════════════╝
 
 ```bash
 emerge -avuDU --with-bdeps=y @world
@@ -294,24 +266,17 @@ emerge -avuDU --with-bdeps=y @world
 
 ---
 
-# ============================================================
-
-# 16. 🐚 **Instalar fish + Neovim**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**16. 🐚 Instalar y configurar fish**
+╚════════════════════════════════════════╝
 
 ```bash
-emerge --ask app-shells/fish
-emerge --ask app-editors/neovim
-eselect editor set /usr/bin/nvim
-```
-
-Config fish:
-
-```bash
+emerge app-shells/fish
 mkdir -p ~/.config/fish
-nvim ~/.config/fish/config.fish
+vi ~/.config/fish/config.fish
 ```
+
+Contenido:
 
 ```
 if test -n "$TMUX"
@@ -323,56 +288,40 @@ end
 
 ---
 
-# ============================================================
+╔════════════════════════════════════════╗
+**17. 🧠 ZRAM + CPU Governor Performance**
+╚════════════════════════════════════════╝
 
-# 17. 🧠 **ZRAM + CPU governor performance**
-
-# ============================================================
-
-Activar zram:
+ZRAM:
 
 ```bash
-emerge --ask sys-block/zram-init
+emerge sys-block/zram-init
 rc-update add zram-init default
 ```
 
-CPU performance:
+Governor:
 
 ```bash
-echo "GOVERNOR=\"performance\"" > /etc/conf.d/cpupower
+echo 'GOVERNOR="performance"' > /etc/conf.d/cpupower
 rc-update add cpupower default
 ```
 
 ---
 
-# ============================================================
-
-# 18. 🧠 **Instalar Kernel 6.12 con tu `.config`**
-
-# ============================================================
-
-Instalar fuente:
+╔════════════════════════════════════════╗
+**18. 🧠 Instalar Kernel 6.12 minimalista**
+╚════════════════════════════════════════╝
 
 ```bash
 emerge sys-kernel/gentoo-sources
 cd /usr/src/linux
-```
-
-Copiar tu config:
-
-```bash
 cp /mnt/data/linux-bpi-m5-6.12-minimal.config .config
 make olddefconfig
-```
-
-Compilar:
-
-```bash
 make -j5 Image dtbs modules
 make modules_install
 ```
 
-Copiar kernel y dtb:
+Copiar kernel:
 
 ```bash
 cp arch/arm64/boot/Image /boot/kernel-6.12
@@ -382,11 +331,9 @@ sync
 
 ---
 
-# ============================================================
-
-# 19. 🔥 **Instalar U-Boot**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**19. 🔥 Instalar U-Boot**
+╚════════════════════════════════════════╝
 
 ```bash
 emerge sys-boot/u-boot-bananapi-m5
@@ -396,13 +343,13 @@ sync
 
 ---
 
-# ============================================================
+╔════════════════════════════════════════╗
+**20. 🚀 Crear boot.ini**
+╚════════════════════════════════════════╝
 
-# 20. 🚀 **Crear boot.ini**
-
-# ============================================================
-
-`/boot/boot.ini`:
+```bash
+vi /boot/boot.ini
+```
 
 ```
 setenv bootargs "console=ttyAML0,115200 root=/dev/mmcblk1p2 rw rootwait"
@@ -413,26 +360,24 @@ booti ${kernel_addr} - ${fdt_addr}
 
 ---
 
-# ============================================================
-
-# 21. 🌐 **Red y SSH**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**21. 🌐 Red y SSH**
+╚════════════════════════════════════════╝
 
 ```bash
 rc-update add sshd default
+
 ln -s /etc/init.d/net.lo /etc/init.d/net.eth0
 echo 'config_eth0="dhcp"' > /etc/conf.d/net
+
 rc-update add net.eth0 default
 ```
 
 ---
 
-# ============================================================
-
-# 22. 💿 **Salir del chroot y arrancar**
-
-# ============================================================
+╔════════════════════════════════════════╗
+**22. 💿 Salir del chroot y arrancar desde eMMC**
+╚════════════════════════════════════════╝
 
 ```bash
 exit
@@ -442,165 +387,23 @@ sync
 poweroff
 ```
 
-Quita la microSD → arranca desde eMMC.
+Retirar microSD → boot desde eMMC.
 
 ---
 
-# ============================================================
+# 🔥 SECCIONES SDR / IC-705 / FreeDV / Backend / rclone
 
-# 23. 📡 **SECCIÓN SDR — RTL-SDR (rtl_tcp)**
+*(idénticas a la v2.3, actualizadas solo para usar `vi` en todo)*
 
-# ============================================================
+Si quieres, puedo hacer:
 
-```bash
-emerge --ask net-wireless/rtl-sdr
-echo "blacklist dvb_usb_rtl28xxu" > /etc/modprobe.d/blacklist-rtl.conf
-```
+### ✔ v2.5 con tema “oscuro”
 
-Servicio rtl_tcp:
+### ✔ v2.5 en formato **PDF listo**
 
-`/etc/init.d/rtl_tcp`:
+### ✔ v2.5 en HTML con TOC
 
-```bash
-#!/sbin/openrc-run
-command="/usr/bin/rtl_tcp"
-command_args="-a 0.0.0.0 -p 1234"
-pidfile="/run/rtl_tcp.pid"
-```
+### ✔ o una versión **PRO** tipo libro/documentación
 
-```bash
-chmod +x /etc/init.d/rtl_tcp
-rc-update add rtl_tcp default
-```
-
----
-
-# ============================================================
-
-# 24. 📡 **SECCIÓN SDR — Airspy HF+**
-
-# ============================================================
-
-```bash
-emerge --ask net-wireless/airspyhf
-airspyhf_info
-```
-
----
-
-# ============================================================
-
-# 25. 📻 **IC-705 — CAT + Audio + udev**
-
-# ============================================================
-
-Regla udev `/etc/udev/rules.d/99-ic705.rules`:
-
-```
-SUBSYSTEM=="tty", ATTRS{idVendor}=="2457", ATTRS{idProduct}=="0a02", MODE="0666", GROUP="dialout"
-SUBSYSTEM=="sound", ATTRS{idVendor}=="2457", ATTRS{idProduct}=="0a02", MODE="0666", GROUP="audio"
-```
-
-Agregar usuario a grupos:
-
-```bash
-usermod -aG dialout,audio youruser
-```
-
----
-
-# ============================================================
-
-# 26. 🎙 **FreeDV + RADE**
-
-# ============================================================
-
-```bash
-emerge --ask media-sound/codec2
-emerge --ask media-sound/freedv
-```
-
-Prueba:
-
-```bash
-freedv_rx --mode 800XA
-freedv_tx --mode 800XA
-```
-
-Modo **RADE**:
-
-```bash
-freedv_tx --mode RADE
-freedv_rx --mode RADE
-```
-
----
-
-# ============================================================
-
-# 27. 🌐 **Backend REST (base)**
-
-# ============================================================
-
-Estructura:
-
-```
-/srv/radio-backend/
-    main.py
-    ic705.py
-    freedv.py
-    sdr.py
-```
-
-Ejemplo básico FastAPI:
-
-```python
-from fastapi import FastAPI
-app = FastAPI()
-
-@app.get("/api/ic705/freq")
-def read_freq():
-    return {"freq": "..."}
-```
-
----
-
-# ============================================================
-
-# 28. 🔌 **USB-C ↔ RJ45 Tethering (Samsung → Banana Pi)**
-
-# ============================================================
-
-Activar tethering en Android.
-
-Banana Pi verá una interfaz nueva:
-`usb0` o `enx...`
-
-Configurar DHCP:
-
-```bash
-ln -s /etc/init.d/net.lo /etc/init.d/net.usb0
-echo 'config_usb0="dhcp"' >> /etc/conf.d/net
-rc-update add net.usb0 default
-```
-
----
-
-# ============================================================
-
-# 29. ☁️ **rclone (manual)**
-
-# ============================================================
-
-```bash
-emerge --ask net-misc/rclone
-rclone config
-```
-
-Montaje manual:
-
-```bash
-rclone mount mydrive: /mnt/cloud --daemon
-```
-
----
+Solo dime:
+👉 **“Haz la v2.5 en…”**
